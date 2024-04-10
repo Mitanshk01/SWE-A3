@@ -1,28 +1,5 @@
 import pika, json
-
-def update_status(request_id, status):
-    """
-    Update the status of a booking request.
-
-    Parameters:
-        request_id (str): The unique identifier of the booking request.
-        status (str): The status to be updated for the booking request.
-
-    Note:
-        This function updates the status of a booking request in a JSON file.
-        If the file doesn't exist, it creates a new file. If the file is empty
-        or corrupted, it initializes an empty dictionary. It then updates the
-        status for the given request ID and writes back the updated data to the file.
-    """
-    with open("request_status_db.json", "r+") as file:
-        try:
-            data = json.load(file)
-        except json.JSONDecodeError:
-            data = {}
-        data[request_id] = status
-        file.seek(0)
-        json.dump(data, file, indent=4)
-        file.truncate()
+from utilities import update_status
 
 def on_confirmation(ch, method, properties, body):
     """
@@ -53,4 +30,5 @@ queue_name = result.method.queue
 channel.queue_bind(exchange='bookingExchange', queue=queue_name, routing_key='booking_confirmation')
 channel.basic_consume(queue=queue_name, on_message_callback=on_confirmation)
 print("Booking Confirmation Service is waiting for confirmations.")
+
 channel.start_consuming()

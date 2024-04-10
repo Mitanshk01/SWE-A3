@@ -15,6 +15,7 @@ def process_booking(body):
         In a real scenario, this function would perform various processing
         tasks such as validating the booking data, updating a database,
         sending notifications, etc.
+        This is the _rationale_ for this extra service
     """
     booking_data = json.loads(body)
     # Simulate processing time and logic

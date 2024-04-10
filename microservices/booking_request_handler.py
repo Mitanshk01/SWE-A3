@@ -1,37 +1,10 @@
 from flask import Flask, request, jsonify
 import pika, json, uuid
 import os
+import sqlite3
+from utilities import update_status, get_status_from_db
 
 app = Flask(__name__)
-
-def update_status(request_id, status):
-    """
-    Update the status of a booking request.
-
-    Parameters:
-        request_id (str): The unique identifier of the booking request.
-        status (str): The status to be updated for the booking request.
-
-    Note:
-        This function updates the status of a booking request in a JSON file.
-        If the file doesn't exist, it creates a new file. If the file is empty
-        or corrupted, it initializes an empty dictionary. It then updates the
-        status for the given request ID and writes back the updated data to the file.
-    """
-    if not os.path.exists("request_status_db.json"):
-        with open("request_status_db.json", "w") as file:
-            json.dump({}, file)
-
-    with open("request_status_db.json", "r+") as file:
-        try:
-            data = json.load(file)
-        except json.JSONDecodeError:
-            data = {}
-
-        data[request_id] = status
-        file.seek(0)
-        json.dump(data, file, indent=4)
-        file.truncate()
 
 @app.route('/book', methods=['POST'])
 def book():
@@ -73,21 +46,10 @@ def check_status(request_id):
 
     Note:
         This endpoint retrieves the status of the specified booking request
-        from a JSON file and returns it as a JSON response. If the file doesn't
-        exist or if there's a JSON decoding error, appropriate error messages
-        are returned.
+        from an SQLite database and returns it as a JSON response.
     """
-    try:
-        if not os.path.exists("request_status_db.json"):
-            return "Unknown Request ID"
-        with open("request_status_db.json", "r") as file:
-            data = json.load(file)
-            print("Data:", data)
-
-        return jsonify({"request_id": request_id, "status": data.get(request_id, "Unknown Request ID")})
-
-    except json.JSONDecodeError:
-        return "Error reading status"
+    status = get_status_from_db(request_id)
+    return jsonify({"request_id": request_id, "status": status})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
