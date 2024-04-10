@@ -27,21 +27,12 @@ def start_processing_request(request_data):
                              - seats (int): The number of seats requested.
                              - request_id (str): The unique identifier of the booking request.
     """
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute('''INSERT INTO request_status (request_id, venueId, seats, status)
-                        VALUES (?, ?, ?, ?);''', (request_data['request_id'], request_data['venueId'], request_data['seats'], 'Pending'))
-        conn.commit()
-        conn.close()
-    except:
-        create_status_table()
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute('''INSERT INTO request_status (request_id, venueId, seats, status)
-                        VALUES (?, ?, ?, ?);''', (request_data['request_id'], request_data['venueId'], request_data['seats'], 'Pending'))
-        conn.commit()
-        conn.close()
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''INSERT INTO request_status (request_id, venueId, seats, status)
+                    VALUES (?, ?, ?, ?);''', (request_data['request_id'], request_data['venueId'], request_data['seats'], 'Pending'))
+    conn.commit()
+    conn.close()
 
 def update_request_status(request_id, status):
     """
@@ -87,5 +78,58 @@ def delete_all_tables():
     tables = cursor.fetchall()
     for table in tables:
         cursor.execute(f"DROP TABLE {table[0]};")
+    conn.commit()
+    conn.close()
+
+def create_venue_occupancy_table():
+    """
+    Create a table to store venue occupancy if it doesn't exist already.
+    Initialize it with venues 1, 2, and 3 with max occupancy.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS venue_occupancy (
+                          venue_id INTEGER PRIMARY KEY,
+                          max_occupancy INTEGER,
+                          current_occupancy INTEGER
+                      );''')
+    # Initialize with venues and max occupancy
+    venues = [(1, 10), (2, 12), (3, 15)]
+    cursor.executemany('''INSERT INTO venue_occupancy (venue_id, max_occupancy, current_occupancy)
+                          VALUES (?, ?, 0);''', venues)
+    conn.commit()
+    conn.close()
+
+def get_venue_occupancy(venue_id):
+    """
+    Retrieve the maximum and current occupancy of the specified venue from the database.
+
+    Parameters:
+        venue_id (int): The ID of the venue.
+
+    Returns:
+        tuple: A tuple containing the maximum occupancy and current occupancy of the venue.
+               If the venue is not found, returns None.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''SELECT max_occupancy, current_occupancy FROM venue_occupancy
+                      WHERE venue_id = ?;''', (venue_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result
+
+def update_venue_occupancy(venue_id, seats):
+    """
+    Update the current occupancy of the specified venue after booking seats.
+
+    Parameters:
+        venue_id (int): The ID of the venue.
+        seats (int): The number of seats booked.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''UPDATE venue_occupancy SET current_occupancy = current_occupancy + ?
+                      WHERE venue_id = ?;''', (seats, venue_id))
     conn.commit()
     conn.close()

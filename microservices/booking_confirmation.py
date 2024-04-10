@@ -1,5 +1,6 @@
 import pika, json
-from utilities import update_request_status
+from utilities import update_request_status, create_venue_occupancy_table,\
+    get_venue_occupancy, update_venue_occupancy
 
 def on_confirmation(ch, method, properties, body):
     """
@@ -18,9 +19,39 @@ def on_confirmation(ch, method, properties, body):
     """
     confirmation_data = json.loads(body)
     request_id = confirmation_data['request_id']
-    update_request_status(request_id, "Confirmed")
-    print(f"Booking confirmed: {confirmation_data}")
+    venue_id = int(confirmation_data['venueId'])
+    seats = int(confirmation_data['seats'])
+
+    # Check if seats can be booked without exceeding max occupancy
+    if seats_can_be_booked(venue_id, seats):
+        update_request_status(request_id, "Confirmed")
+        update_venue_occupancy(venue_id, seats)
+        print(f"Booking confirmed: {confirmation_data}")
+    else:
+        update_request_status(request_id, "Denied")
+        print(f"Booking denied: {confirmation_data}")
+
     ch.basic_ack(delivery_tag=method.delivery_tag)
+
+def seats_can_be_booked(venue_id, seats):
+    """
+    Check if the given number of seats can be booked for the specified venue
+    without exceeding the maximum occupancy.
+
+    Parameters:
+        venue_id (int): The ID of the venue.
+        seats (int): The number of seats requested.
+
+    Returns:
+        bool: True if seats can be booked, False otherwise.
+    """
+    venue_occupancy = get_venue_occupancy(venue_id)
+    if venue_occupancy:
+        max_occupancy = int(venue_occupancy[0])
+        current_occupancy = int(venue_occupancy[1])
+        if current_occupancy + seats <= max_occupancy:
+            return True
+    return False
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
