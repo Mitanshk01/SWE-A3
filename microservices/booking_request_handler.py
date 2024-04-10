@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import pika, json, uuid
 import os
 import sqlite3
-from utilities import update_status, get_status_from_db
+from utilities import start_processing_request, get_status_from_db
 
 app = Flask(__name__)
 
@@ -21,7 +21,7 @@ def book():
     request_id = str(uuid.uuid4())
     data['request_id'] = request_id
 
-    update_status(request_id, "Pending")
+    start_processing_request(data)
 
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()

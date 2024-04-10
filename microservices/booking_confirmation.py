@@ -1,5 +1,5 @@
 import pika, json
-from utilities import update_status
+from utilities import update_request_status
 
 def on_confirmation(ch, method, properties, body):
     """
@@ -18,7 +18,7 @@ def on_confirmation(ch, method, properties, body):
     """
     confirmation_data = json.loads(body)
     request_id = confirmation_data['request_id']
-    update_status(request_id, "Confirmed")
+    update_request_status(request_id, "Confirmed")
     print(f"Booking confirmed: {confirmation_data}")
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
