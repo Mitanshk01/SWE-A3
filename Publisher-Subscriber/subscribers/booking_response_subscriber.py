@@ -1,26 +1,44 @@
-from message_broker import MessageBroker
-from utilities import get_status_from_db
+import pika
 import json
+from utilities import get_status_from_db
 
 class BookingResponseSubscriber:
-    def __init__(self):
-        self.broker = MessageBroker()
+    def __init__(self, exchange_name, queue_name):
+        self.connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+        self.channel = self.connection.channel()
+        self.exchange_name = exchange_name
+        self.queue_name = queue_name
+        self.channel.exchange_declare(exchange=exchange_name, exchange_type='fanout')
+        self.channel.queue_declare(queue=self.queue_name)
+        self.channel.queue_bind(exchange=exchange_name, queue=self.queue_name)
+        self.channel.basic_qos(prefetch_count=1)
 
-    def handle_message(self, ch, method, properties, body):
-        # Extract request ID from the message body
-        request_id = body.decode()
-        print(f"Received request ID: {request_id}")
-
-        # Check the status of the request ID in the database
+    def callback(self, ch, method, properties, body):
+        # body just has the request_id 
+        print(" [y] Received message:", json.loads(body))
+        request_id = json.loads(body)['request_id']
         status = get_status_from_db(request_id)
-        print(f"Status for request ID {request_id}: {status}")
+        print(f" [y] Status for request_id {request_id}: {status}")
 
-
-        # Publish the status as a response message
-        response_message = {'request_id': request_id, 'status': status}
-        self.broker.publish_message('booking_response', '', json.dumps(response_message))
+        
 
     def start_consuming(self):
-        self.broker.create_queue('booking_response_queue')
-        self.broker.bind_queue_to_exchange('booking_response_queue', 'booking_response', '')
-        self.broker.consume_messages('booking_response_queue', self.handle_message)
+        self.channel.basic_consume(queue=self.queue_name, on_message_callback=self.callback, auto_ack=True)
+        print(' [^] Waiting for messages. To exit press CTRL+C')
+        self.channel.start_consuming()
+
+    def close_connection(self):
+        self.connection.close()
+
+
+
+# config = { 'host': 'localhost', 'port': 5672, 'exchange' : 'bookingRequestExchange'}
+# if len(sys.argv) < 2:
+#    print('Usage: ' + __file__ + ' <QueueName> <BindingKey>')
+#    sys.exit()
+# else:
+#    queueName = sys.argv[1]
+#    #key in the form exchange.*
+#    key = sys.argv[2]
+#    subscriber = Subscriber(queueName, key, config)
+#    subscriber.setup()

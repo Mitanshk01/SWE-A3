@@ -1,27 +1,37 @@
-import requests
 from publishers.booking_request_publisher import BookingRequestPublisher
-import json
+from subscribers.booking_request_subscriber import BookingRequestSubscriber
 from publishers.booking_response_publisher import BookingResponsePublisher
+from subscribers.booking_response_subscriber import BookingResponseSubscriber
+import json
 import uuid
+
+# Define exchange names
+booking_request_exchange = 'booking_request_exchange'
+booking_response_exchange = 'booking_response_exchange'
+
+# Define queue names
+booking_request_queue = 'booking_request_queue'
+booking_response_queue = 'booking_response_queue'
+
+# Create publishers and subscribers
+booking_request_publisher = BookingRequestPublisher(booking_request_exchange)
+booking_response_publisher = BookingResponsePublisher(booking_response_exchange)
+
+booking_request_subscriber = BookingRequestSubscriber(booking_request_exchange, booking_request_queue)
+booking_response_subscriber = BookingResponseSubscriber(booking_response_exchange, booking_response_queue)
 
 
 def make_booking(venue_id, seats):
-    request_Data = {
-        "venueId": venue_id,
-        "seats": seats
-    }
-    publisher = BookingRequestPublisher()
-    request_id = str(uuid.uuid4())
-    message = json.dumps(request_Data)
-    publisher.publish(message)
-    return request_id
+    request_data = {"request_id": str(uuid.uuid4()), 
+                    "venueId": venue_id, "seats": seats}
+    booking_request_publisher.publish_message(request_data)
 
+    return request_data["request_id"]
 
 def check_booking_status(request_id):
-    publisher = BookingResponsePublisher()
-    publisher.publish(request_id)
-    print("Request sent to check booking status.")
-
+    booking_response_publisher.publish_message({"request_id": request_id})
+    return "TODO : Figure out how to get status from booking_response_subscriber"
+    # return booking_response_subscriber.get_status(request_id)
 
 if __name__ == "__main__":
     print("Welcome to the Booking Client")

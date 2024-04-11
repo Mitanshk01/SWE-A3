@@ -1,0 +1,3 @@
+from client import booking_response_subscriber
+
+booking_response_subscriber.start_consuming()
