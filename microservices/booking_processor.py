@@ -1,6 +1,6 @@
 import pika
 import json
-from utilities import start_processing_request, get_status_from_db
+from utilities import start_processing_request, get_status_from_db, update_request_status
 
 def process_booking(body):
     """
@@ -65,11 +65,39 @@ def on_status_check(ch, method, properties, body):
     request_id = status_check_data.get('request_id')
     status = get_status_from_db(request_id)
 
+    print("Return status at on_status_check", status, "for request ID", request_id)
+
     # Send back the status response
     response_data = {"request_id": request_id, "status": status}
     ch.basic_publish(exchange='status_exchange',
                      routing_key='status_response_queue',
                      body=json.dumps(response_data))
+    
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+def on_status_update(ch, method, properties, body):
+    """
+    Callback function invoked when a status update request message is received.
+
+    Parameters:
+        ch (pika.channel.Channel): The channel object.
+        method (pika.spec.Basic.Deliver): Delivery information.
+        properties (pika.spec.BasicProperties): Message properties.
+        body (bytes): The message body containing the status update request data.
+
+    Note:
+        This function processes the status update request and updates the status
+        of the corresponding booking request in the database.
+    """
+    print("Received status update request:", body)
+    status_update_data = json.loads(body)
+    request_id = status_update_data.get('request_id')
+    status = status_update_data.get('status')
+
+    # Update the status in the database
+    update_request_status(request_id, status)
+
+    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
@@ -80,7 +108,9 @@ result = channel.queue_declare(queue='', exclusive=True)
 queue_name = result.method.queue
 channel.queue_bind(exchange='bookingExchange', queue=queue_name, routing_key='booking_request')
 
-# Declare the 'status_check_request' queue
+channel.queue_declare(queue='status_update_queue')
+channel.queue_bind(exchange='bookingExchange', queue='status_update_queue', routing_key='status_update')
+
 channel.queue_declare(queue='status_check_request')
 channel.queue_bind(exchange='status_exchange', queue='status_check_request', routing_key='status_check_request')
 
@@ -90,6 +120,7 @@ channel.queue_bind(exchange='status_exchange', queue='status_response_queue', ro
 channel.basic_qos(prefetch_count=1)
 channel.basic_consume(queue=queue_name, on_message_callback=on_request)
 channel.basic_consume(queue='status_check_request', on_message_callback=on_status_check)
+channel.basic_consume(queue='status_update_queue', on_message_callback=on_status_update)
 
 print("Booking Processor Service is waiting for booking requests and status check requests.")
 channel.start_consuming()

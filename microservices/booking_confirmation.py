@@ -1,6 +1,6 @@
-import pika, json
-from utilities import update_request_status, create_venue_occupancy_table,\
-    get_venue_occupancy, update_venue_occupancy
+import pika
+import json
+from utilities import get_venue_occupancy, update_venue_occupancy
 
 def on_confirmation(ch, method, properties, body):
     """
@@ -13,9 +13,9 @@ def on_confirmation(ch, method, properties, body):
         body (bytes): The message body containing the confirmation data.
 
     Note:
-        This function processes the booking confirmation message, updates the
-        status of the corresponding booking request to 'Confirmed', and acknowledges
-        the message.
+        This function processes the booking confirmation message, checks if the
+        seats can be booked without exceeding the maximum occupancy, and sends
+        a request back to the processor to update the status accordingly.
     """
     confirmation_data = json.loads(body)
     request_id = confirmation_data['request_id']
@@ -24,11 +24,11 @@ def on_confirmation(ch, method, properties, body):
 
     # Check if seats can be booked without exceeding max occupancy
     if seats_can_be_booked(venue_id, seats):
-        update_request_status(request_id, "Confirmed")
         update_venue_occupancy(venue_id, seats)
+        send_status_update(request_id, "Confirmed")
         print(f"Booking confirmed: {confirmation_data}")
     else:
-        update_request_status(request_id, "Denied")
+        send_status_update(request_id, "Denied")
         print(f"Booking denied: {confirmation_data}")
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
@@ -53,13 +53,31 @@ def seats_can_be_booked(venue_id, seats):
             return True
     return False
 
+def send_status_update(request_id, status):
+    """
+    Send a status update request to the processor to update the status of the
+    specified booking request.
+
+    Parameters:
+        request_id (str): The unique identifier of the booking request.
+        status (str): The status to update (Confirmed or Denied).
+    """
+    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    channel = connection.channel()
+    channel.exchange_declare(exchange='bookingExchange', exchange_type='direct')
+    channel.basic_publish(exchange='bookingExchange',
+                          routing_key='status_update',
+                          body=json.dumps({"request_id": request_id, "status": status}))
+    connection.close()
+
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
 channel.exchange_declare(exchange='bookingExchange', exchange_type='direct')
+
 result = channel.queue_declare(queue='', exclusive=True)
 queue_name = result.method.queue
 channel.queue_bind(exchange='bookingExchange', queue=queue_name, routing_key='booking_confirmation')
 channel.basic_consume(queue=queue_name, on_message_callback=on_confirmation)
-print("Booking Confirmation Service is waiting for confirmations.")
 
+print("Booking Confirmation Service is waiting for confirmations.")
 channel.start_consuming()

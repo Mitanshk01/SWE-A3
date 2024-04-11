@@ -41,6 +41,7 @@ def send_status_check_request(request_id):
                           routing_key='status_check_request',
                           body=json.dumps({"request_id": request_id}))
     connection.close()
+    print("Sent status check request")
 
 def get_status_from_processor(request_id):
     """
