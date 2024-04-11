@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import pika, json, uuid
 import os
 import sqlite3
-from utilities import start_processing_request, get_status_from_db
+from utilities import get_status_from_db
 
 app = Flask(__name__)
 
@@ -13,15 +13,12 @@ def book():
 
     Note:
         This endpoint receives a booking request, generates a unique request ID,
-        updates the status as 'Pending' using the update_status() function,
         publishes the booking request message to a RabbitMQ server, and returns
         a response with status 202 (Accepted).
     """
     data = request.json
     request_id = str(uuid.uuid4())
     data['request_id'] = request_id
-
-    start_processing_request(data)
 
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()

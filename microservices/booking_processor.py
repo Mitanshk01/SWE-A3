@@ -1,5 +1,6 @@
 import pika
 import json
+from utilities import start_processing_request
 
 def process_booking(body):
     """
@@ -18,6 +19,7 @@ def process_booking(body):
         This is the _rationale_ for this extra service
     """
     booking_data = json.loads(body)
+    start_processing_request(booking_data)
     # Simulate processing time and logic
     print(f"Processed booking request: {booking_data}")
     return booking_data  # In a real scenario, we'd update this data as needed
