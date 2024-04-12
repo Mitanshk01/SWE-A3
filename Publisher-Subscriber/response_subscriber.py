@@ -1,4 +1,5 @@
-from client import client
+from handler import Handler
 
-print("[Client] Welcome to the Response Listener part of Client - Subscriber")
-client.start_consuming()
+print("[Handler] Welcome to the Check Booking Status Listener part of Handler - Subscriber")
+handler = Handler()
+handler.start_consuming_response()

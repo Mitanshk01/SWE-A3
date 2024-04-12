@@ -12,12 +12,17 @@ class BookingResponseSubscriber:
         self.channel.queue_declare(queue=self.queue_name)
         self.channel.queue_bind(exchange=exchange_name, queue=self.queue_name)
         self.channel.basic_qos(prefetch_count=1)
+         
 
     def callback(self, ch, method, properties, body):
         print(" [y] Checking status for request_id:", json.loads(body)['request_id'])
         request_id = json.loads(body)['request_id']
         status = get_status_from_db(request_id)
         print(f" [y] Status for request_id {request_id}: {status}")
+        # Publish it on message exchange
+        self.channel.basic_publish(exchange='message_exchange',
+                        routing_key='',
+                        body=json.dumps({"request_id": request_id, "status": status}))
         return status
         
     def start_consuming(self):

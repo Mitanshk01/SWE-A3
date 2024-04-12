@@ -23,6 +23,5 @@ def print_venue_occupancy():
         print(row)
     conn.close()
 
-#print_table()
-
+print_table()
 print_venue_occupancy()

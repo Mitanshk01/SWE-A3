@@ -35,7 +35,7 @@ class BookingRequestSubscriber:
     
     def send_status_update(self, request_id, status):
         # publish the status on the booking_response_exchange
-        self.channel.basic_publish(exchange='booking_response_exchange',
+        self.channel.basic_publish(exchange='message_exchange',
                         routing_key='',
                         body=json.dumps({"request_id": request_id, "status": status}))
         

@@ -1,6 +1,6 @@
 from publishers.booking_request_publisher import BookingRequestPublisher
 from publishers.booking_response_publisher import BookingResponsePublisher
-from subscribers.booking_response_subscriber import BookingResponseSubscriber
+from subscribers.message_subscriber import MessageSubscriber
 import uuid
 
 
@@ -8,7 +8,7 @@ class Client:
     def __init__(self):
         self.booking_request_publisher = BookingRequestPublisher('booking_request_exchange')
         self.booking_response_publisher = BookingResponsePublisher('booking_response_exchange')
-        self.booking_response_subscriber = BookingResponseSubscriber('booking_response_exchange', 'booking_response_queue')
+        self.message_subscriber = MessageSubscriber('message_exchange', 'message_queue')
 
     def make_booking(self, venue_id, seats):
         request_data = {"request_id": str(uuid.uuid4()), "venueId": venue_id, "seats": seats}
@@ -22,7 +22,7 @@ class Client:
         print(f"[CLient] Booking Status: {status}")
 
     def start_consuming(self):
-        self.booking_response_subscriber.start_consuming()
+        self.message_subscriber.start_consuming()
 
     def close_connection(self):
         self.booking_response_subscriber.close_connection()
