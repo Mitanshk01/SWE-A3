@@ -44,14 +44,12 @@ class BookingRequestSubscriber:
     def callback(self, ch, method, properties, body):
         print(" [x] Received booking request for:", json.loads(body)['request_id'])
         self.process_booking(body)
-        # ch.basic_publish(exchange='booking_response_exchange',
-        #                 routing_key='booking_confirmation',
-        #                 body=json.dumps(json.loads(body)))
-
         body = json.loads(body)
+
         request_id = body['request_id']
         venue_id = body['venueId']
         seats = body['seats']
+
         if self.seats_can_be_booked(venue_id, seats):
             update_venue_occupancy(venue_id, seats)
             body['status'] = 'Confirmed'
@@ -61,6 +59,7 @@ class BookingRequestSubscriber:
         else:
             body['status'] = 'Denied'
             self.update_booking_status(body)
+            print(f" [x] Venue occupancy exceeded for request_id {request_id}")
             print(f" [x] Booking denied for request_id {request_id}")
             self.send_status_update(request_id, "Denied")
 
@@ -71,16 +70,3 @@ class BookingRequestSubscriber:
 
     def close_connection(self):
         self.connection.close()
-
-
-
-# config = { 'host': 'localhost', 'port': 5672, 'exchange' : 'bookingRequestExchange'}
-# if len(sys.argv) < 2:
-#    print('Usage: ' + __file__ + ' <QueueName> <BindingKey>')
-#    sys.exit()
-# else:
-#    queueName = sys.argv[1]
-#    #key in the form exchange.*
-#    key = sys.argv[2]
-#    subscriber = Subscriber(queueName, key, config)
-#    subscriber.setup()
