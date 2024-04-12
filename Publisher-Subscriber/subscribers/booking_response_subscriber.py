@@ -15,11 +15,12 @@ class BookingResponseSubscriber:
 
     def callback(self, ch, method, properties, body):
         # body just has the request_id 
-        print(" [y] Received message:", json.loads(body))
+        print(" [y] Checking status for request_id:", json.loads(body)['request_id'])
         request_id = json.loads(body)['request_id']
         status = get_status_from_db(request_id)
         print(f" [y] Status for request_id {request_id}: {status}")
 
+        return status
         
 
     def start_consuming(self):

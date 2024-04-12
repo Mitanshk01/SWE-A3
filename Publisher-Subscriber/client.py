@@ -1,59 +1,57 @@
 from publishers.booking_request_publisher import BookingRequestPublisher
-from subscribers.booking_request_subscriber import BookingRequestSubscriber
 from publishers.booking_response_publisher import BookingResponsePublisher
 from subscribers.booking_response_subscriber import BookingResponseSubscriber
-import json
 import uuid
 
-# Define exchange names
-booking_request_exchange = 'booking_request_exchange'
-booking_response_exchange = 'booking_response_exchange'
 
-# Define queue names
-booking_request_queue = 'booking_request_queue'
-booking_response_queue = 'booking_response_queue'
+class Client:
+    def __init__(self):
+        self.booking_request_publisher = BookingRequestPublisher('booking_request_exchange')
+        self.booking_response_publisher = BookingResponsePublisher('booking_response_exchange')
+        self.booking_response_subscriber = BookingResponseSubscriber('booking_response_exchange', 'booking_response_queue')
 
-# Create publishers and subscribers
-booking_request_publisher = BookingRequestPublisher(booking_request_exchange)
-booking_response_publisher = BookingResponsePublisher(booking_response_exchange)
+    def make_booking(self, venue_id, seats):
+        request_data = {"request_id": str(uuid.uuid4()), 
+                        "venueId": venue_id, "seats": seats}
+        self.booking_request_publisher.publish_message(request_data)
 
-booking_request_subscriber = BookingRequestSubscriber(booking_request_exchange, booking_request_queue)
-booking_response_subscriber = BookingResponseSubscriber(booking_response_exchange, booking_response_queue)
+        return request_data["request_id"]
 
+    def check_booking_status(self, request_id):
+        self.booking_response_publisher.publish_message({"request_id": request_id})
+        #TO DO:  return booking_response_subscriber.get_status(request_id)
 
-def make_booking(venue_id, seats):
-    request_data = {"request_id": str(uuid.uuid4()), 
-                    "venueId": venue_id, "seats": seats}
-    booking_request_publisher.publish_message(request_data)
+    def print_booking_status(self, status):
+        print(f"[CLient] Booking Status: {status}")
 
-    return request_data["request_id"]
+    def start_consuming(self):
+        self.booking_response_subscriber.start_consuming()
 
-def check_booking_status(request_id):
-    booking_response_publisher.publish_message({"request_id": request_id})
-    return "TODO : Figure out how to get status from booking_response_subscriber"
-    # return booking_response_subscriber.get_status(request_id)
+    def close_connection(self):
+        self.booking_response_subscriber.close_connection()
+
+client = Client()
 
 if __name__ == "__main__":
-    print("Welcome to the Booking Client")
+    print("[Client] Welcome to the Booking Client")
     while True:
-        action = input("Choose action - [1] Make Booking, [2] Check Status: ").strip()
+        action = input("[Client] Choose action - [1] Make Booking, [2] Check Status: ").strip()
         
         # Making a booking
         if action == "1":
-            venue_id = input("Enter venue ID: ")
-            seats = input("Enter number of seats: ")
-            request_id = make_booking(venue_id, seats)
+            venue_id = input("[Client] Enter venue ID: ")
+            seats = input("[Client] Enter number of seats: ")
+            request_id = client.make_booking(venue_id, seats)
 
             if request_id:
-                print(f"Booking request submitted. Request ID: {request_id}")
+                print(f"[Client] Booking request submitted. Request ID: {request_id}")
             else:
-                print("Failed to make booking request.")
+                print("[Client] Failed to make booking request.")
         
         # Checking booking status
         elif action == "2":
-            request_id = input("Enter request ID to check status: ")
-            status = check_booking_status(request_id)
-            print(f"Booking Status for {request_id}: {status}")
-
+            request_id = input("[Client] Enter request ID to check status: ")
+            client.check_booking_status(request_id)
+            # print(f"[Client] Booking Status for {request_id}: {status}")
         else:
-            print("Invalid action selected.")
+            print("[Client] Invalid action selected.")

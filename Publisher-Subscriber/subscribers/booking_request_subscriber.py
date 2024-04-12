@@ -42,12 +42,11 @@ class BookingRequestSubscriber:
         print(f" [x] Sent status update: {status}")
 
     def callback(self, ch, method, properties, body):
-        print(" [x] Received message:", json.loads(body))
+        print(" [x] Received booking request for:", json.loads(body)['request_id'])
         self.process_booking(body)
         # ch.basic_publish(exchange='booking_response_exchange',
         #                 routing_key='booking_confirmation',
         #                 body=json.dumps(json.loads(body)))
-        print(" [x] Sent booking confirmation")
 
         body = json.loads(body)
         request_id = body['request_id']
@@ -57,12 +56,12 @@ class BookingRequestSubscriber:
             update_venue_occupancy(venue_id, seats)
             body['status'] = 'Confirmed'
             self.update_booking_status(body)
-            print(f"Booking confirmed: {body}")
+            print(f" [x] Booking confirmed for request_id {request_id}")
             self.send_status_update(request_id, "Confirmed")
         else:
             body['status'] = 'Denied'
             self.update_booking_status(body)
-            print(f"Booking denied: {body}")
+            print(f" [x] Booking denied for request_id {request_id}")
             self.send_status_update(request_id, "Denied")
 
     def start_consuming(self):

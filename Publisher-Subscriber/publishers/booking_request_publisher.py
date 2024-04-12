@@ -10,7 +10,7 @@ class BookingRequestPublisher:
 
     def publish_message(self, message):
         self.channel.basic_publish(exchange=self.exchange_name, routing_key='', body=json.dumps(message))
-        print(" [x] Sent message:", message)
+        # print(" [x] Sent message:", message)
         
 
     def close_connection(self):

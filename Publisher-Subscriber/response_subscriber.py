@@ -1,3 +1,4 @@
-from client import booking_response_subscriber
+from client import client
 
-booking_response_subscriber.start_consuming()
+print("[Client] Welcome to the Response Listener part of Client - Subscriber")
+client.start_consuming()
