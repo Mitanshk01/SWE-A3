@@ -94,7 +94,7 @@ def create_venue_occupancy_table():
                           current_occupancy INTEGER
                       );''')
     # Initialize with venues and max occupancy
-    venues = [(1, 10), (2, 12), (3, 15)]
+    venues = [(1, 500), (2, 200), (3, 200)]
     cursor.executemany('''INSERT INTO venue_occupancy (venue_id, max_occupancy, current_occupancy)
                           VALUES (?, ?, 0);''', venues)
     conn.commit()
